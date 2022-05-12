@@ -1,18 +1,32 @@
-time = 1652274160226852
+time = 1652256823552322
 sizeof(long) = 8
-chip1_can1_sendto_chip2_can1_recvnumber = 2
-chip1_can1_sendto_chip2_can1_recvnumber = 3
-all bytes:38
-alltime =  2848 
-Speed:13342.696289 byte/s
-chip1_can2_sendto_chip2_can2_listcmp chip1can2_sendto_chip2can2_recvnumber = 3
-===chip1_can1_sendto_chip2_can1_recvnumber = 1
-exit
-receive overtime 4s
-Receive Package failure Number:0
-all bytes:38
+len = 19
+55 02 00 13 00 00 00 00 00 08 01 00 00 00 00 00 00 00 AA 
+55 00 01 13 00 00 00 00 00 08 01 00 00 00 00 00 00 00 AA 
+len = 19
+55 02 00 13 00 00 00 00 00 08 02 00 00 00 00 00 00 00 AA 
+55 00 01 13 00 00 00 00 00 08 02 00 00 00 00 00 00 00 AA 
+len = 19
+55 02 00 13 00 00 00 00 00 08 03 00 00 00 00 00 00 00 AA 
+ReceiveThread_Send Receive Package failure Number:0
+all bytes:57
 exit receive thread
+55 00 01 13 00 00 00 00 00 08 03 00 00 00 00 00 00 00 AA 
+all bytes:57
+alltime =  2717 
+Speed:20979.021484 byte/s
+Erorr: i = 1 j = 1
+Erorr: i = 1 j = 2
+Erorr: i = 1 j = 3
+Erorr: i = 2 j = 2
+Erorr: i = 2 j = 3
+Erorr: i = 3 j = 3
+
+sendThread all_sendrecv_dalay = 0
+sendThread recv_number = 0
+sendThread average_sandrecv_delay = 0
+exit
 receive overtime 8s
-ReceiveThread_Send Receive Package failure Number:1
+Receive Package failure Number:2
 all bytes:19
 exit receive thread

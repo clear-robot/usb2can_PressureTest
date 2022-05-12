@@ -21,10 +21,9 @@ struct CAN_Fream                   //can发送功能相关结构体  16bytes
 struct CAN_Fream send_frame = {0x55, 0x00, 0x01, 0x13, 0x00, 0x01, 0x08};
 struct CAN_Fream recv_control_frame = {0x55, 0x00, 0x01, 0x13, 0x00, 0x00, 0x08};
 
-void chip1_can2_sendto_chip2_can2_listcmp();
+void frame_data_cmp();
 void count_sendrecv_dalay();
-void chip2_can1_sendto_chip1_can1_listcmp();
-void chip1_can1_sendto_chip2_can1_listcmp();
+void frame_sendThread_data_cmp();
 int main() {
   std::cout << "time = " << TimeStamp::Now() << std::endl;
 
@@ -64,19 +63,18 @@ int main() {
       memcpy(send_frame.canData, &send_package_number, sizeof(send_frame.canData));
       // Set send package data
       memcpy(send_control_buf, &send_frame, sizeof(send_frame));
-      gettimeofday(&send_control_send_fream_list[send_package_number].time,0);
-
+      gettimeofday(&send_fream_list[send_package_number].time,0);
       if (send_control.Write((char*)&send_control_buf[0], 19) <= 0){
           send_package_fail_number++;
           continue;
       }
-      memcpy(send_control_send_fream_list[send_package_number].canData, send_frame.canData, sizeof(send_frame.canData));
 
-
+      
       memcpy(recv_control_frame.canData, &send_package_number, sizeof(recv_control_frame.canData));
       memcpy(recv_control_buf, &recv_control_frame, sizeof(recv_control_frame));
+
       gettimeofday(&recvcontol_send_fream_list[send_package_number].time,0);
-      if (send_control.Write((char*)&recv_control_buf[0], 19) <= 0){
+      if (recv_control.Write((char*)&recv_control_buf[0], 19) <= 0){
           recv_control_package_fail_number++;
           continue;
       }
@@ -88,6 +86,7 @@ int main() {
             // printf("\n");
 
       // Save the mask to send_list
+      memcpy(send_fream_list[send_package_number].canData, send_frame.canData, sizeof(send_frame.canData));
 
       memcpy(recvcontol_send_fream_list[send_package_number].canData, recv_control_frame.canData, sizeof(recv_control_frame.canData));
 
@@ -97,39 +96,37 @@ int main() {
   }
   gettimeofday(&send_last_package_time,0);
   printf("all bytes:%d\n",19*SET_SEND_PACKAGE_NUMBER);
-  struct timeval alltime = TimeStamp::SubTime(send_last_package_time,send_first_package_time);
+  struct timeval alltime = TimeStamp::SubTime(send_first_package_time,send_last_package_time);
   long long send_alltime = alltime.tv_sec*1000000 + alltime.tv_usec;
-  printf("alltime =  %ld \n",alltime.tv_sec*1000000 + alltime.tv_usec);
-  printf("send/time = %f \n", 2*SET_SEND_PACKAGE_NUMBER/((float)send_alltime/1000/1000));
+  printf("alltime =  %lld \n",send_alltime);
+  printf("Speed:%f byte/s\n", 19*SET_SEND_PACKAGE_NUMBER/((float)send_alltime/1000/1000));
 
-  chip1_can2_sendto_chip2_can2_listcmp();
-  // chip2_can1_sendto_chip1_can1_listcmp();
-  chip1_can1_sendto_chip2_can1_listcmp();
+  frame_data_cmp();
+  frame_sendThread_data_cmp();
   std::cout << "exit" << std::endl;
   return 0;
 }
 #if 1
 bool cmp_canData(uint8_t *s1,uint8_t *s2){
   for(int i = 0;i < 8;i++){
-    //printf("%x   %x\n",s1[i],s2[i]);
+    // printf("%x   %x\n",s1[i],s2[i]);
     if(s1[i] != s2[i]){
       return false;
     }
   }
   return true;
 }
-void chip1_can2_sendto_chip2_can2_listcmp(){
+void frame_data_cmp(){
   struct timeval all_sendrecv_dalay = {0};
   struct timeval MAX_sendrecv_delay = {0};
   struct timeval MIN_sendrecv_delay;
   MIN_sendrecv_delay.tv_usec = 2147483648;  // 2^31
   struct timeval temp_delay;
+  // average_sandrecv_delay = {0};
   long long recv_number = 0;
-  if(chip1can2_sendto_chip2can2_recvnumber == (SET_SEND_PACKAGE_NUMBER+1)){
-     chip1can2_sendto_chip2can2_recvnumber--;
-  }
-  if(chip1can2_sendto_chip2can2_recvnumber != SET_SEND_PACKAGE_NUMBER){
-     printf("===chip1can2_sendto_chip2can2_recvnumber = %d\n",chip1can2_sendto_chip2can2_recvnumber);
+//problem should be find
+  if(receive_package_number != SET_SEND_PACKAGE_NUMBER){
+     printf("receive_package_number = %d\n",receive_package_number);
      return;
   }
   int i = 1;
@@ -138,34 +135,36 @@ void chip1_can2_sendto_chip2_can2_listcmp(){
   for (i = 1;i <= SET_SEND_PACKAGE_NUMBER;i++){
     j = i;
       for (;j <= SET_SEND_PACKAGE_NUMBER;j++){
-          if (cmp_canData(recv_fream_list[i].canData,send_control_send_fream_list[j].canData) == true){
-
-              temp_delay = TimeStamp::SubTime(recv_fream_list[i].time,send_control_send_fream_list[j].time);
-              
+          if (cmp_canData(recv_fream_list[i].canData,send_fream_list[j].canData) == true){
+              temp_delay = TimeStamp::SubTime(recv_fream_list[i].time,send_fream_list[j].time);
               recv_number++;
-              // printf("temp_delay = %ld  recv_fream_list_chip1can1_sendto_chip2can1[%d].time = %ld - recvcontol_send_fream_list[%d].time = %ld \n",
+              // printf("temp_delay = %ld  recv_fream_list[%d].time = %ld - send_fream_list[%d].time = %ld \n",
               //                                                                          temp_delay.tv_sec*1000000 + temp_delay.tv_usec,
-              //                                                                          i,recv_fream_list_chip1can1_sendto_chip2can1[i].time.tv_sec*1000000 + recv_fream_list_chip1can1_sendto_chip2can1[i].time.tv_usec,
-              //                                                                          j,recvcontol_send_fream_list[j].time.tv_sec*1000000 + recvcontol_send_fream_list[j].time.tv_usec);
-              // printf("%d  temp_dalay = %d\n",i,temp_delay);
+              //                                                                          i,recv_fream_list[i].time.tv_sec*1000000 + recv_fream_list[i].time.tv_usec,
+              //                                                                          j,send_fream_list[j].time.tv_sec*1000000 + send_fream_list[j].time.tv_usec);
+              //printf("%d  temp_dalay = %d\n",i,temp_dalay);
 
               all_sendrecv_dalay = TimeStamp::AddTime(all_sendrecv_dalay,temp_delay);
+              //printf("all_sendrecv_dalay = %d\n",all_sendrecv_dalay);
               MAX_sendrecv_delay = TimeStamp::MaxTime(MAX_sendrecv_delay,temp_delay);
               MIN_sendrecv_delay = TimeStamp::MinTime(MIN_sendrecv_delay,temp_delay);
              
               break;
           }else{
-            std::cout << "chip1_can1_sendto_chip2_can1_listcmp Erorr: i = " << i  <<" j = "<< j <<"\n"; 
+            std::cout << "Erorr: i = " << i  <<" j = "<< j <<"\n"; 
           }
       }
   }
-  printf("\nchip1_can2_sendto_chip2_can2_listcmp all_sendrecv_dalay = %lld\n",(long long)all_sendrecv_dalay.tv_sec*1000000 + (long long)all_sendrecv_dalay.tv_usec);
-  printf("chip1_can2_sendto_chip2_can2_listcmp recv_number = %lld\n",recv_number);
-  printf("chip1_can2_sendto_chip2_can2_listcmp average_sandrecv_delay = %lld\n",((long long)all_sendrecv_dalay.tv_sec*1000000 + (long long)all_sendrecv_dalay.tv_usec)/SET_SEND_PACKAGE_NUMBER);
+  // average_sandrecv_delay = all_sendrecv_dalay / recv_number;
+  printf("\nall_sendrecv_dalay = %lld\n",(long long)all_sendrecv_dalay.tv_sec*1000000 + (long long)all_sendrecv_dalay.tv_usec);
+  // printf("MAX_sendrecv_delay = %lld\n",(long long)MAX_sendrecv_delay.tv_sec*1000000 + (long long)MAX_sendrecv_delay.tv_usec);
+  // printf("MIN_sendrecv_delay = %lld\n",(long long)MIN_sendrecv_delay.tv_sec*1000000 + (long long)MIN_sendrecv_delay.tv_usec);
+  printf("recv_number = %lld\n",recv_number);
+  printf("average_sandrecv_delay = %lld\n",((long long)all_sendrecv_dalay.tv_sec*1000000 + (long long)all_sendrecv_dalay.tv_usec)/SET_SEND_PACKAGE_NUMBER);
 
 }
 
-void chip2_can1_sendto_chip1_can1_listcmp(){
+void frame_sendThread_data_cmp(){
   struct timeval all_sendrecv_dalay = {0};
   struct timeval MAX_sendrecv_delay = {0};
   struct timeval MIN_sendrecv_delay;
@@ -201,7 +200,7 @@ void chip2_can1_sendto_chip1_can1_listcmp(){
              
               break;
           }else{
-            std::cout << "chip2_can1_sendto_chip1_can1_listcmp Erorr: i = " << i  <<" j = "<< j <<"\n"; 
+            std::cout << "Erorr: i = " << i  <<" j = "<< j <<"\n"; 
           }
       }
   }
@@ -213,47 +212,4 @@ void chip2_can1_sendto_chip1_can1_listcmp(){
 
 }
 
-void chip1_can1_sendto_chip2_can1_listcmp(){
-  struct timeval all_sendrecv_dalay = {0};
-  struct timeval MAX_sendrecv_delay = {0};
-  struct timeval MIN_sendrecv_delay;
-  MIN_sendrecv_delay.tv_usec = 2147483648;  // 2^31
-  struct timeval temp_delay;
-  long long recv_number = 0;
-  if(chip1_can1_sendto_chip2_can1_recvnumber != SET_SEND_PACKAGE_NUMBER){
-     printf("===chip1_can1_sendto_chip2_can1_recvnumber = %d\n",chip1_can1_sendto_chip2_can1_recvnumber);
-     return;
-  }
-  int i = 1;
-  int j = 1;
-
-  for (i = 1;i <= SET_SEND_PACKAGE_NUMBER;i++){
-    j = i;
-      for (;j <= SET_SEND_PACKAGE_NUMBER;j++){
-          if (cmp_canData(recv_fream_list_chip1can1_sendto_chip2can1[i].canData,recvcontol_send_fream_list[j].canData) == true){
-
-              temp_delay = TimeStamp::SubTime(recv_fream_list_chip1can1_sendto_chip2can1[i].time,recvcontol_send_fream_list[j].time);
-              
-              recv_number++;
-              // printf("temp_delay = %ld  recv_fream_list_chip1can1_sendto_chip2can1[%d].time = %ld - recvcontol_send_fream_list[%d].time = %ld \n",
-              //                                                                          temp_delay.tv_sec*1000000 + temp_delay.tv_usec,
-              //                                                                          i,recv_fream_list_chip1can1_sendto_chip2can1[i].time.tv_sec*1000000 + recv_fream_list_chip1can1_sendto_chip2can1[i].time.tv_usec,
-              //                                                                          j,recvcontol_send_fream_list[j].time.tv_sec*1000000 + recvcontol_send_fream_list[j].time.tv_usec);
-              // printf("%d  temp_dalay = %d\n",i,temp_delay);
-
-              all_sendrecv_dalay = TimeStamp::AddTime(all_sendrecv_dalay,temp_delay);
-              MAX_sendrecv_delay = TimeStamp::MaxTime(MAX_sendrecv_delay,temp_delay);
-              MIN_sendrecv_delay = TimeStamp::MinTime(MIN_sendrecv_delay,temp_delay);
-             
-              break;
-          }else{
-            std::cout << "chip1_can1_sendto_chip2_can1_listcmp Erorr: i = " << i  <<" j = "<< j <<"\n"; 
-          }
-      }
-  }
-  printf("\nchip1_can1_sendto_chip2_can1_listcmp all_sendrecv_dalay = %lld\n",(long long)all_sendrecv_dalay.tv_sec*1000000 + (long long)all_sendrecv_dalay.tv_usec);
-  printf("chip1_can1_sendto_chip2_can1_listcmp recv_number = %lld\n",recv_number);
-  printf("chip1_can1_sendto_chip2_can1_listcmp average_sandrecv_delay = %lld\n",((long long)all_sendrecv_dalay.tv_sec*1000000 + (long long)all_sendrecv_dalay.tv_usec)/SET_SEND_PACKAGE_NUMBER);
-
-}
 #endif

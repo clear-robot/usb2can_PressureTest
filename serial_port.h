@@ -10,20 +10,18 @@
 #include "serial_port_stream.h"
 #include "time_stamp.h"
 
-#define SET_SEND_PACKAGE_NUMBER 1000
+#define SET_SEND_PACKAGE_NUMBER 10000
 #define SET_SEND_INTERVAL 40  // us
 typedef struct {
     uint8_t canData[8];
     struct timeval time;
 }fream;
-extern fream send_control_send_fream_list[];
+extern fream send_fream_list[];
 extern fream recvcontol_send_fream_list[];
 extern fream recv_fream_list[];
 extern fream recv_fream_list_sendThread[];
-extern uint32_t chip1can2_sendto_chip2can2_recvnumber;
+extern uint32_t receive_package_number;
 extern uint32_t receive_package_number_SendThread;
-extern uint32_t chip1_can1_sendto_chip2_can1_recvnumber;
-extern fream recv_fream_list_chip1can1_sendto_chip2can1[];
 class SerialPort {
  public:
   //无校验

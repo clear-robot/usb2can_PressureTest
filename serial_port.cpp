@@ -15,12 +15,11 @@
 #include "time_stamp.h"
 #include <sys/time.h>
 
-fream send_control_send_fream_list[SET_SEND_PACKAGE_NUMBER] = {0};
+fream send_fream_list[SET_SEND_PACKAGE_NUMBER] = {0};
 fream recvcontol_send_fream_list[SET_SEND_PACKAGE_NUMBER] = {0};
 
 fream recv_fream_list[SET_SEND_PACKAGE_NUMBER] = {0};
 fream recv_fream_list_sendThread[SET_SEND_PACKAGE_NUMBER] = {0};
-fream recv_fream_list_chip1can1_sendto_chip2can1[SET_SEND_PACKAGE_NUMBER] = {0};
 
 SerialPort::SerialPort() : stream_(), pthread_(NULL), RTS_flag_(TIOCM_RTS), DTR_flag_(TIOCM_DTR), running_flag_(true) {
 }
@@ -103,10 +102,7 @@ void PrintfBuf(char buf[], int len) {
 //     // fprintf (pFile, ",%ld\n",receive_last_package_time);
 // }
 
-uint32_t chip1can2_sendto_chip2can2_recvnumber = 1;
-
-uint32_t receive_package_number_SendThread = 1;
-uint32_t chip1_can1_sendto_chip2_can1_recvnumber = 1;
+uint32_t receive_package_number = 1;
 void *ReceiveThread(void *arg) {
     SerialPort *serial_port = (SerialPort *) (arg);
     uint32_t kReceive_overtime = 4 * 1000 * 1000;  // Receive overtime receive
@@ -118,16 +114,19 @@ void *ReceiveThread(void *arg) {
     struct timeval temp_time;  //temp time
     uint8_t buf[1024];
     int len = 0;
-
-    while (chip1can2_sendto_chip2can2_recvnumber <= SET_SEND_PACKAGE_NUMBER || chip1_can1_sendto_chip2_can1_recvnumber <= SET_SEND_PACKAGE_NUMBER){
+    while (receive_package_number <= SET_SEND_PACKAGE_NUMBER) {
         len = read(serial_port->fd_, buf, sizeof(buf));
         if (len > 0) {
             gettimeofday(&receive_last_package_time,0);
 
-            if (chip1can2_sendto_chip2can2_recvnumber == 1) {
+            if (receive_package_number == 1) {
                 gettimeofday(&receive_first_package_time,0);
             }
-            
+            // Write the data and time to file
+            // Save the recv mask to recv_list
+            // memcpy(recv_fream_list[receive_package_number].canData, &buf[10], 8);
+            // gettimeofday(&recv_fream_list[receive_package_number].time,0);
+
             // printf("len = %d\n", len);
             // for (size_t i = 0; i < len; i++)
             // {
@@ -135,62 +134,44 @@ void *ReceiveThread(void *arg) {
             // }
             // printf("\n");
             for (int i_len = 0;i_len < len/19;i_len++){
-                #if 0
+                // printf("buf[%d] = %x\t",1 + i_len*19,buf[1 + i_len*19]);
                 if (buf[1 + i_len*19] == 0x02){
-                    memcpy(recv_fream_list[chip1can2_sendto_chip2can2_recvnumber].canData, &buf[10], 8);
-                    gettimeofday(&recv_fream_list[chip1can2_sendto_chip2can2_recvnumber].time,0);
-                    chip1can2_sendto_chip2can2_recvnumber++;
+                    memcpy(recv_fream_list[receive_package_number].canData, &buf[10], 8);
+                    gettimeofday(&recv_fream_list[receive_package_number].time,0);
+                    receive_package_number++;
                     // printf("receive_package_number_SendThread = %d\n",receive_package_number_SendThread);
                 }
-                #endif
-                #if 1
-                if (buf[8 + i_len*19] == 0x01){
-                    memcpy(recv_fream_list[chip1can2_sendto_chip2can2_recvnumber].canData, &buf[10], 8);
-                    gettimeofday(&recv_fream_list[chip1can2_sendto_chip2can2_recvnumber].time,0);
-
-                    // printf("chip1can2_sendto_chip2can2_recvnumber = %d\n",chip1can2_sendto_chip2can2_recvnumber);
-
-                    chip1can2_sendto_chip2can2_recvnumber++;
-
-                }else if(buf[8 + i_len*19] == 0x00){  //chip1_can1_sendto_chip2_can1_listcmp
-                    memcpy(recv_fream_list_chip1can1_sendto_chip2can1[chip1_can1_sendto_chip2_can1_recvnumber].canData, &buf[10], 8);
-                    gettimeofday(&recv_fream_list_chip1can1_sendto_chip2can1[chip1_can1_sendto_chip2_can1_recvnumber].time,0);
-                    
-                    // printf("chip1_can1_sendto_chip2_can1_recvnumber = %d\n",chip1_can1_sendto_chip2_can1_recvnumber);
-                    chip1_can1_sendto_chip2_can1_recvnumber++;
-
-                }else{
-                    printf("this is bug\n");
-                }
-                #endif
             }
+            // printf("recv_fream_list[%d].time.sec = %ld  tv_usec = %ld\n",receive_package_number,recv_fream_list[receive_package_number].time.tv_sec,recv_fream_list[receive_package_number].time.tv_usec);
+            // if (buf[1] == 0x02){
+            //     receive_package_number++;
+            //     // printf("receive_package_number = %d\n",receive_package_number);
+            // }
+           
             len = 0;
         }
         gettimeofday(&now_time,0);
         temp_time = TimeStamp::SubTime(now_time,receive_last_package_time);
 
         if ((temp_time.tv_sec*1000000 + temp_time.tv_usec) > kReceive_overtime) {
-            printf("receive overtime 4s\n");
+            printf("receive overtime 8s\n");
             break;
         }
     }
 
-    if(chip1_can1_sendto_chip2_can1_recvnumber == SET_SEND_PACKAGE_NUMBER+1){
-        chip1_can1_sendto_chip2_can1_recvnumber--;
-     }
-    if(chip1can2_sendto_chip2can2_recvnumber == (SET_SEND_PACKAGE_NUMBER+1)){
-        chip1can2_sendto_chip2can2_recvnumber--;
+    if(receive_package_number == SET_SEND_PACKAGE_NUMBER+1){
+        receive_package_number--;
     }
     struct timeval alltime = TimeStamp::SubTime(receive_last_package_time,receive_first_package_time);
-    printf("Receive Package failure Number:%d\n",SET_SEND_PACKAGE_NUMBER - chip1can2_sendto_chip2can2_recvnumber);
-    printf("all bytes:%d\n",19*chip1can2_sendto_chip2can2_recvnumber);
+    printf("Receive Package failure Number:%d\n",SET_SEND_PACKAGE_NUMBER - receive_package_number);
+    printf("all bytes:%d\n",19*receive_package_number);
     long long recv_alltime = alltime.tv_sec*1000000 + alltime.tv_usec;
 
     printf("exit receive thread\n");
     return NULL;
 }
 
-//uint32_t receive_package_number_SendThread = 1;
+uint32_t receive_package_number_SendThread = 1;
 void *ReceiveThread_Send(void *arg) {
     SerialPort *serial_port = (SerialPort *) (arg);
     uint32_t kReceive_overtime = 4 * 1000 * 1000;  // Receive overtime receive
@@ -204,7 +185,7 @@ void *ReceiveThread_Send(void *arg) {
     int len = 0;
     while (receive_package_number_SendThread <= SET_SEND_PACKAGE_NUMBER) {
         len = read(serial_port->fd_, buf, sizeof(buf));
-        if (len > 0){
+        if (len > 0) {
             gettimeofday(&receive_last_package_time,0);
 
             if (receive_package_number_SendThread == 1) {
@@ -214,13 +195,15 @@ void *ReceiveThread_Send(void *arg) {
             // Save the recv mask to recv_list
             // memcpy(recv_fream_list_sendThread[receive_package_number_SendThread].canData, &buf[10], 8);
             // gettimeofday(&recv_fream_list_sendThread[receive_package_number_SendThread].time,0);
+
                 // printf("len = %d\n", len);
                 // for (size_t i = 0; i < len; i++)
                 // {
                 //     printf("%02X ", buf[i]);
                 // }
                 // printf("\n");
-
+            // printf("recv_fream_list_sendThread[%d].time.sec = %ld  tv_usec = %ld\n",receive_package_number,recv_fream_list_sendThread[receive_package_number].time.tv_sec,recv_fream_list_sendThread[receive_package_number].time.tv_usec);
+            // printf("len/19 = %d  ",len/19);
             for (int i_len = 0;i_len < len/19;i_len++){
                 // printf("buf[%d] = %x\t",1 + i_len*19,buf[1 + i_len*19]);
                 if (buf[1 + i_len*19] == 0x02){
@@ -314,7 +297,7 @@ int SerialPort::open_send_port(const char *dev, int baud, int dataBits, int pari
     SetTxMode();
     if (tcflush(fd_, TCIOFLUSH))
         return CONFIG_FAIL;
-     pthread_ = new std::thread(ReceiveThread_Send, this);
+    pthread_ = new std::thread(ReceiveThread_Send, this);
     return OK;
 }
 
