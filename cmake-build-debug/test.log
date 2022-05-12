@@ -1,0 +1,18 @@
+time = 1652274160226852
+sizeof(long) = 8
+chip1_can1_sendto_chip2_can1_recvnumber = 2
+chip1_can1_sendto_chip2_can1_recvnumber = 3
+all bytes:38
+alltime =  2848 
+Speed:13342.696289 byte/s
+chip1_can2_sendto_chip2_can2_listcmp chip1can2_sendto_chip2can2_recvnumber = 3
+===chip1_can1_sendto_chip2_can1_recvnumber = 1
+exit
+receive overtime 4s
+Receive Package failure Number:0
+all bytes:38
+exit receive thread
+receive overtime 8s
+ReceiveThread_Send Receive Package failure Number:1
+all bytes:19
+exit receive thread

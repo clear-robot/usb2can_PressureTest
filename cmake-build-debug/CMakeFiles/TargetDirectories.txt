@@ -1,0 +1,3 @@
+/home/ubuntu/serial_port/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/ubuntu/serial_port/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/ubuntu/serial_port/cmake-build-debug/CMakeFiles/serial_port.dir
